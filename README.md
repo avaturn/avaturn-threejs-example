@@ -1,0 +1,1 @@
+This example shows how to load Avaturn avatars using three.js.
