@@ -15,7 +15,7 @@
       rel="stylesheet"
     />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Avaturn iframe Example</title>
+    <title>Avaturn three.js Example</title>
     <link href="./main.css" rel="stylesheet" />
   </head>
 
@@ -27,8 +27,7 @@
         <input type="button" id="buttonClose" value="Close Avaturn" />
       </div>
     </section>
-    <iframe id="frame" class="iframe" allow="camera *; clipboard-write">
-    </iframe>
+    <div id="avaturn-sdk-container"></div>
     <div style="position: fixed">
       <a
         href="https://avaturn.me"
@@ -47,8 +46,8 @@
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.148.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.148.0/examples/jsm/"
+                "three": "https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/"
             }
         }
     </script>

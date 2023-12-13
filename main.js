@@ -1,37 +1,35 @@
 import * as THREE from "three";
 
 import Stats from "three/addons/libs/stats.module.js";
-import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+
+// if using package manager: npm install @avaturn/sdk
+import { AvaturnSDK } from "https://cdn.jsdelivr.net/npm/@avaturn/sdk/dist/index.js";
 
 let scene, renderer, camera, stats, animationGroup;
 let model, mixer, clock;
 let currentAvatar;
 
-const crossFadeControls = [];
-
-let idleAction, walkAction, runAction;
-let idleWeight, walkWeight, runWeight;
-let actions, settings;
-
-let singleStepMode = false;
-let sizeOfNextStep = 0;
+let idleAction;
 
 async function loadAvatar(url) {
   const loader = new GLTFLoader();
   const gltf = await loader.loadAsync(url);
-
   model = gltf.scene;
-
   scene.add(model);
 
+  // Set some other params
   model.traverse(function (object) {
     if (object.isMesh) {
       object.castShadow = true;
       object.receiveShadow = true;
       object.material.envMapIntensity = 0.3;
+      // Turn off mipmaps to make textures look crispier (only use if texture resolution is 1k)
+      if (object.material.map && !object.material.name.includes("hair")) {
+        object.material.map.generateMipmaps = false;
+      }
     }
   });
 
@@ -65,15 +63,15 @@ async function init() {
   mixer = new THREE.AnimationMixer(animationGroup);
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xa0a0a0);
-  scene.fog = new THREE.Fog(0xa0a0a0, 10, 50);
+  scene.background = new THREE.Color(0xc0c0c0);
+  scene.fog = new THREE.Fog(0xc0c0c0, 20, 50);
 
   const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444);
   hemiLight.position.set(0, 20, 0);
   scene.add(hemiLight);
 
   const dirLight = new THREE.DirectionalLight(0xffffff);
-  dirLight.position.set(-3, 10, -10);
+  dirLight.position.set(3, 3, 5);
   dirLight.castShadow = true;
   dirLight.shadow.camera.top = 2;
   dirLight.shadow.camera.bottom = -2;
@@ -81,6 +79,8 @@ async function init() {
   dirLight.shadow.camera.right = 2;
   dirLight.shadow.camera.near = 0.1;
   dirLight.shadow.camera.far = 40;
+  dirLight.shadow.bias = -0.001;
+  dirLight.intensity = 3;
   scene.add(dirLight);
 
   new RGBELoader().load(
@@ -109,14 +109,13 @@ async function init() {
   loader.load("public/animation.glb", function (gltf) {
     const clip = filterAnimation(gltf.animations[0]);
     const action = mixer.clipAction(clip);
-    walkAction = action;
-    walkAction.play();
+    idleAction = action;
+    idleAction.play();
   });
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.shadowMap.enabled = true;
   container.appendChild(renderer.domElement);
 
@@ -124,9 +123,6 @@ async function init() {
   container.appendChild(stats.dom);
 
   window.addEventListener("resize", onWindowResize);
-
-  const frame = document.getElementById("frame");
-  frame.hidden = true;
 
   animate();
 }
@@ -147,13 +143,6 @@ function animate() {
 
   let mixerUpdateDelta = clock.getDelta();
 
-  // If in single step mode, make one step and then do nothing (until the user clicks again)
-
-  if (singleStepMode) {
-    mixerUpdateDelta = sizeOfNextStep;
-    sizeOfNextStep = 0;
-  }
-
   // Update the animation mixer, the stats panel, and render this frame
 
   mixer.update(mixerUpdateDelta);
@@ -163,41 +152,36 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-function subscribe(event) {
-  /* Here we process the events from the iframe */
-
-  let json;
-  try {
-    json = JSON.parse(event.data);
-  } catch (error) {
-    console.log("Error parsing the event data.");
-    return;
-  }
-
-  if (json.source !== "avaturn") {
-    return;
-  }
-
-  // Get avatar GLB URL
-  if (json.eventName === "v2.avatar.exported") {
-    loadAvatar(json.data.url).then((model) => {
-      currentAvatar.visible = false;
-      currentAvatar = model;
-    });
-    closeIframe();
-  }
-}
-
 function openIframe() {
-  // Replace it with your own subdomain
-  let subdomain = "demo";
-  if (frame.src == "") {
-    frame.src = `https://${subdomain}.avaturn.dev/iframe`;
-  }
-  frame.hidden = false;
+  initAvaturn();
+  document.querySelector("#avaturn-sdk-container").hidden = false;
 }
 function closeIframe() {
-  frame.hidden = true;
+  document.querySelector("#avaturn-sdk-container").hidden = true;
+}
+
+function initAvaturn() {
+  const container = document.getElementById("avaturn-sdk-container");
+
+  // Replace it with your own subdomain
+  const subdomain = "demo";
+  const url = `https://${subdomain}.avaturn.dev`;
+
+  // You can now use AvaturnSDK
+  const sdk = new AvaturnSDK();
+  sdk.init(container, { url }).then(() => {
+    sdk.on("export", (data) => {
+      loadAvatar(data.url).then((model) => {
+        currentAvatar.visible = false;
+        currentAvatar.removeFromParent();
+        animationGroup.uncache(currentAvatar);
+        animationGroup.remove(currentAvatar);
+        console.log(animationGroup);
+        currentAvatar = model;
+      });
+      closeIframe();
+    });
+  });
 }
 
 await init();
@@ -205,6 +189,3 @@ await init();
 closeIframe();
 document.querySelector("#buttonOpen").addEventListener("click", openIframe);
 document.querySelector("#buttonClose").addEventListener("click", closeIframe);
-
-window.addEventListener("message", subscribe);
-document.addEventListener("message", subscribe);

@@ -95,14 +95,15 @@ a, button, input, select {
     position: fixed;
 }
 
-.iframe {
+#avaturn-sdk-container {
     position: fixed;
+	border-radius: 20px;
     margin: auto;
     right: 0px;
     left: 0;
     top: 0;
     bottom: 0;
-    width: 90%;
+    width: 95%;
     height: 90%;
-    border: 0px;
+	overflow:hidden;
 }
