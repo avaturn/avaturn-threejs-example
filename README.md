@@ -1,5 +1,6 @@
-This example shows how to load Avaturn avatars using three.js.
+This example shows how to load [Avaturn](https://avaturn.me) avatars using three.js.
 
+![Avaturn Three.js example](https://assets.avaturn.me/docs/three-js-example.jpg)
 
 # Build
 
@@ -16,3 +17,6 @@ ws
 ```
 
 The server will open up at `http://localhost:8000`
+
+
+Read more at [docs.avaturn.me](https://docs.avaturn.me).
