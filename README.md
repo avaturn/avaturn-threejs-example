@@ -6,13 +6,13 @@ This example shows how to load [Avaturn](https://avaturn.me) avatars using three
 
 There is nothing to build, just run a http server in this folder. You can install one with e.g.: 
 
-```
+```bash
 npm install -g local-web-server
 ```
 
 And then run 
 
-```
+```bash
 ws
 ```
 
