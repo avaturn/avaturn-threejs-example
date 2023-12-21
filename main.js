@@ -4,6 +4,7 @@ import Stats from "three/addons/libs/stats.module.js";
 
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 // if using package manager: npm install @avaturn/sdk
 import { AvaturnSDK } from "https://cdn.jsdelivr.net/npm/@avaturn/sdk/dist/index.js";
@@ -49,19 +50,33 @@ function filterAnimation(animation) {
 async function init() {
   const container = document.getElementById("container");
 
+  // Init renderer
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  container.appendChild(renderer.domElement);
+
+  // Init camera and controls
   camera = new THREE.PerspectiveCamera(
     45,
     window.innerWidth / window.innerHeight,
-    1,
-    1000
+    0.1,
+    100
   );
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+
   camera.position.set(-2, 1, 3);
-  camera.lookAt(0, 1, 0);
+  controls.target.set(0, 1, 0);
+
+  controls.update();
 
   clock = new THREE.Clock();
   animationGroup = new THREE.AnimationObjectGroup();
   mixer = new THREE.AnimationMixer(animationGroup);
 
+  // Init lighting, ground plane, env map
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xc0c0c0);
   scene.fog = new THREE.Fog(0xc0c0c0, 20, 50);
@@ -83,17 +98,10 @@ async function init() {
   dirLight.intensity = 3;
   scene.add(dirLight);
 
-  new RGBELoader().load(
-    "public/brown_photostudio_01.hdr",
-    (texture) => {
-      texture.mapping = THREE.EquirectangularReflectionMapping;
-      scene.environment = texture;
-    },
-    (texture) => {},
-    (texture) => {}
-  );
-
-  // ground
+  new RGBELoader().load("public/brown_photostudio_01.hdr", (texture) => {
+    texture.mapping = THREE.EquirectangularReflectionMapping;
+    scene.environment = texture;
+  });
 
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(100, 100),
@@ -103,8 +111,10 @@ async function init() {
   mesh.receiveShadow = true;
   scene.add(mesh);
 
+  // Load default avatar
   currentAvatar = await loadAvatar("public/default_model.glb");
 
+  // Load default animation
   const loader = new GLTFLoader();
   loader.load("public/animation.glb", function (gltf) {
     const clip = filterAnimation(gltf.animations[0]);
@@ -112,12 +122,6 @@ async function init() {
     idleAction = action;
     idleAction.play();
   });
-
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.shadowMap.enabled = true;
-  container.appendChild(renderer.domElement);
 
   stats = new Stats();
   container.appendChild(stats.dom);
@@ -155,9 +159,11 @@ function animate() {
 function openIframe() {
   initAvaturn();
   document.querySelector("#avaturn-sdk-container").hidden = false;
+  document.querySelector("#buttonOpen").disabled = true;
 }
 function closeIframe() {
   document.querySelector("#avaturn-sdk-container").hidden = true;
+  document.querySelector("#buttonOpen").disabled = false;
 }
 
 function initAvaturn() {
@@ -176,7 +182,7 @@ function initAvaturn() {
         currentAvatar.removeFromParent();
         animationGroup.uncache(currentAvatar);
         animationGroup.remove(currentAvatar);
-        console.log(animationGroup);
+
         currentAvatar = model;
       });
       closeIframe();
